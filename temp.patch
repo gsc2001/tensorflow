@@ -1,0 +1,39 @@
+
+m 3c245f52912612ed9d8e20245ddb5de055680969 Mon Sep 17 00:00:00 2001
+From: Justine Tunney <jart@google.com>
+Date: Thu, 5 Apr 2018 13:23:08 -0700
+Subject: [PATCH] Enable branch prediction in TensorFlow
+
+PiperOrigin-RevId: 191788253
+---
+ tensorflow/core/platform/macros.h | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/tensorflow/core/platform/macros.h b/tensorflow/core/platform/macros.h
+index 6119edfd5a63d..1b1faed7033ff 100644
+--- a/tensorflow/core/platform/macros.h
++++ b/tensorflow/core/platform/macros.h
+@@ -67,11 +67,18 @@ limitations under the License.
+ #define TF_EXPORT __attribute__((visibility("default")))
+ #endif  // COMPILER_MSVC
+ 
+-// GCC can be told that a certain branch is not likely to be taken (for
+-// instance, a CHECK failure), and use that information in static analysis.
+-// Giving it this information can help it optimize for the common case in
+-// the absence of better information (ie. -fprofile-arcs).
+-#if defined(COMPILER_GCC3)
++#ifdef __has_builtin
++#define TF_HAS_BUILTIN(x) __has_builtin(x)
++#else
++#define TF_HAS_BUILTIN(x) 0
++#endif
++
++// Compilers can be told that a certain branch is not likely to be taken
++// (for instance, a CHECK failure), and use that information in static
++// analysis. Giving it this information can help it optimize for the
++// common case in the absence of better information (ie.
++// -fprofile-arcs).
++#if TF_HAS_BUILTIN(__builtin_expect) || (defined(__GNUC__) && __GNUC__ >= 3)
+ #define TF_PREDICT_FALSE(x) (__builtin_expect(x, 0))
+ #define TF_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+ #else
